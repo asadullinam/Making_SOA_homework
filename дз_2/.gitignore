@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+
+# IDE
+.vscode/
+
+# Env
+.env
+
+# Generated
+app/src/generated/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# OS
+.DS_Store
