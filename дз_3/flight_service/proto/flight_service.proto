@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package flight.v1;
+
+option go_package = "github.com/aydar/soa-dz3/flight_service/proto;flightv1";
+
+import "google/protobuf/timestamp.proto";
+
+// API Flight Service.
+service FlightService {
+  // Поиск по маршруту и дате.
+  rpc SearchFlights(SearchFlightsRequest) returns (SearchFlightsResponse);
+
+  // Рейс по ID.
+  rpc GetFlight(GetFlightRequest) returns (GetFlightResponse);
+
+  // Резерв мест.
+  rpc ReserveSeats(ReserveSeatsRequest) returns (ReserveSeatsResponse);
+
+  // Отмена резерва.
+  rpc ReleaseReservation(ReleaseReservationRequest) returns (ReleaseReservationResponse);
+}
+
+message SearchFlightsRequest {
+  string origin = 1; // IATA, напр. SVO
+  string destination = 2; // IATA, напр. LED
+  // Дата вылета (опц.).
+  google.protobuf.Timestamp departure_date = 3;
+}
+
+message SearchFlightsResponse {
+  repeated Flight flights = 1;
+}
+
+message GetFlightRequest {
+  string flight_id = 1;
+}
+
+message GetFlightResponse {
+  Flight flight = 1;
+}
+
+message ReserveSeatsRequest {
+  string flight_id = 1;
+  string booking_id = 2;
+  int32 seat_count = 3;
+}
+
+message ReserveSeatsResponse {
+  SeatReservation reservation = 1;
+}
+
+message ReleaseReservationRequest {
+  string booking_id = 1;
+}
+
+message ReleaseReservationResponse {
+  SeatReservation reservation = 1;
+}
+
+message Flight {
+  string id = 1;
+  string airline = 2;
+  string flight_number = 3;
+  string origin = 4;
+  string destination = 5;
+  google.protobuf.Timestamp departure_time = 6;
+  google.protobuf.Timestamp arrival_time = 7;
+  int32 total_seats = 8;
+  int32 available_seats = 9;
+  int64 price_cents = 10;
+  FlightStatus status = 11;
+}
+
+enum FlightStatus {
+  FLIGHT_STATUS_UNSPECIFIED = 0;
+  FLIGHT_STATUS_SCHEDULED = 1;
+  FLIGHT_STATUS_DEPARTED = 2;
+  FLIGHT_STATUS_CANCELLED = 3;
+  FLIGHT_STATUS_COMPLETED = 4;
+}
+
+message SeatReservation {
+  string id = 1;
+  string flight_id = 2;
+  string booking_id = 3;
+  int32 seat_count = 4;
+  ReservationStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+enum ReservationStatus {
+  RESERVATION_STATUS_UNSPECIFIED = 0;
+  RESERVATION_STATUS_ACTIVE = 1;
+  RESERVATION_STATUS_RELEASED = 2;
+  RESERVATION_STATUS_EXPIRED = 3;
+}
+
+// Ошибки:
+// - INVALID_ARGUMENT: неверный ввод
+// - NOT_FOUND: рейс/резерв не найден
+// - RESOURCE_EXHAUSTED: нет мест
+// - ALREADY_EXISTS: дубль по booking_id

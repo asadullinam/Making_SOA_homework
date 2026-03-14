@@ -1,0 +1,71 @@
+Enum flight_status {
+  SCHEDULED
+  DEPARTED
+  CANCELLED
+  COMPLETED
+}
+
+Enum reservation_status {
+  ACTIVE
+  RELEASED
+  EXPIRED
+}
+
+Enum booking_status {
+  CONFIRMED
+  CANCELLED
+}
+
+Table flight_service.flights {
+  id uuid [pk]
+  airline varchar [not null]
+  flight_number varchar [not null]
+  origin char(3) [not null]
+  destination char(3) [not null]
+  departure_time timestamp [not null]
+  arrival_time timestamp [not null]
+  total_seats int [not null]
+  available_seats int [not null]
+  price_cents int [not null]
+  status flight_status [not null]
+  flight_date date [not null]
+
+  indexes {
+    (flight_number, flight_date) [unique]
+  }
+
+  note: 'total_seats > 0, price_cents > 0, available_seats >= 0, available_seats <= total_seats'
+}
+
+Table flight_service.seat_reservations {
+  id uuid [pk]
+  flight_id uuid [not null]
+  booking_id uuid [not null]
+  seat_count int [not null]
+  status reservation_status [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    booking_id [unique]
+  }
+
+  note: 'seat_count > 0'
+}
+
+Ref: flight_service.seat_reservations.flight_id > flight_service.flights.id
+
+Table booking_service.bookings {
+  id uuid [pk]
+  user_id uuid [not null]
+  flight_id uuid [not null]
+  passenger_name varchar [not null]
+  passenger_email varchar [not null]
+  seat_count int [not null]
+  total_price_cents int [not null]
+  status booking_status [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  note: 'seat_count > 0, total_price_cents > 0'
+}
