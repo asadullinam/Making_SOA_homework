@@ -99,3 +99,15 @@ services:
     restart: on-failure
     ports:
       - "8080:8080"
+
+  swagger_ui:
+    image: swaggerapi/swagger-ui:latest
+    environment:
+      SWAGGER_JSON: /openapi/flight_service.yaml
+    volumes:
+      - ./flight_service/resources/openapi/flight_service.yaml:/openapi/flight_service.yaml:ro
+    depends_on:
+      booking_service:
+        condition: service_started
+    ports:
+      - "8081:8080"

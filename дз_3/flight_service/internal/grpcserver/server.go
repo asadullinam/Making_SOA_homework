@@ -55,13 +55,17 @@ func (s *Server) SearchFlights(ctx context.Context, req *flightv1.SearchFlightsR
 		return nil, status.Error(codes.Internal, "ошибка поиска")
 	}
 
+	maxVersion := int64(0)
 	resp := &flightv1.SearchFlightsResponse{Flights: make([]*flightv1.Flight, 0, len(flights))}
 	for _, f := range flights {
+		if f.Version > maxVersion {
+			maxVersion = f.Version
+		}
 		resp.Flights = append(resp.Flights, toProtoFlight(f))
 	}
 
 	if s.cache != nil {
-		_ = s.cache.SetSearch(ctx, req.GetOrigin(), req.GetDestination(), dateKey, resp.Flights)
+		_ = s.cache.SetSearchIfNewer(ctx, req.GetOrigin(), req.GetDestination(), dateKey, maxVersion, resp.Flights)
 	}
 	return resp, nil
 }
@@ -92,7 +96,7 @@ func (s *Server) GetFlight(ctx context.Context, req *flightv1.GetFlightRequest) 
 	}
 	resp := &flightv1.GetFlightResponse{Flight: toProtoFlight(flight)}
 	if s.cache != nil {
-		_ = s.cache.SetFlight(ctx, req.GetFlightId(), resp.Flight)
+		_ = s.cache.SetFlightIfNewer(ctx, req.GetFlightId(), flight.Version, resp.Flight)
 	}
 	return resp, nil
 }
@@ -123,6 +127,9 @@ func (s *Server) ReserveSeats(ctx context.Context, req *flightv1.ReserveSeatsReq
 		if f, err := s.store.GetFlight(ctx, req.GetFlightId()); err == nil {
 			dateKey := f.DepartureTime.UTC().Format("2006-01-02")
 			s.cache.InvalidateSearch(ctx, f.Origin, f.Destination, dateKey)
+			_ = s.cache.SetFlightVersion(ctx, f.ID, f.Version)
+			_ = s.cache.SetSearchVersion(ctx, f.Origin, f.Destination, dateKey, f.Version)
+			_ = s.cache.SetSearchVersion(ctx, f.Origin, f.Destination, "any", f.Version)
 		}
 	}
 	return &flightv1.ReserveSeatsResponse{Reservation: toProtoReservation(res)}, nil
@@ -145,6 +152,9 @@ func (s *Server) ReleaseReservation(ctx context.Context, req *flightv1.ReleaseRe
 		if f, err := s.store.GetFlight(ctx, res.FlightID); err == nil {
 			dateKey := f.DepartureTime.UTC().Format("2006-01-02")
 			s.cache.InvalidateSearch(ctx, f.Origin, f.Destination, dateKey)
+			_ = s.cache.SetFlightVersion(ctx, f.ID, f.Version)
+			_ = s.cache.SetSearchVersion(ctx, f.Origin, f.Destination, dateKey, f.Version)
+			_ = s.cache.SetSearchVersion(ctx, f.Origin, f.Destination, "any", f.Version)
 		}
 	}
 

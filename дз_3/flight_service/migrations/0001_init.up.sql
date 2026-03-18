@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS flights (
   available_seats int NOT NULL CHECK (available_seats >= 0),
   price_cents int NOT NULL CHECK (price_cents > 0),
   status varchar NOT NULL CHECK (status IN ('SCHEDULED', 'DEPARTED', 'CANCELLED', 'COMPLETED')),
+  version bigint NOT NULL DEFAULT 0,
   flight_date date NOT NULL,
   CONSTRAINT flight_unique UNIQUE (flight_number, flight_date),
   CHECK (available_seats <= total_seats)

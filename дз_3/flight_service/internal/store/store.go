@@ -32,6 +32,7 @@ type Flight struct {
 	AvailableSeats int
 	PriceCents     int64
 	Status         string
+	Version        int64
 }
 
 type Reservation struct {
@@ -55,7 +56,7 @@ func (s *Store) SearchFlights(ctx context.Context, origin, destination string, d
 	if date != nil {
 		rows, err = s.pool.Query(ctx, `
 			SELECT id, airline, flight_number, origin, destination, departure_time, arrival_time,
-			       total_seats, available_seats, price_cents, status
+			       total_seats, available_seats, price_cents, status, version
 			FROM flights
 			WHERE origin=$1 AND destination=$2 AND status='SCHEDULED' AND flight_date=$3
 			ORDER BY departure_time
@@ -63,7 +64,7 @@ func (s *Store) SearchFlights(ctx context.Context, origin, destination string, d
 	} else {
 		rows, err = s.pool.Query(ctx, `
 			SELECT id, airline, flight_number, origin, destination, departure_time, arrival_time,
-			       total_seats, available_seats, price_cents, status
+			       total_seats, available_seats, price_cents, status, version
 			FROM flights
 			WHERE origin=$1 AND destination=$2 AND status='SCHEDULED'
 			ORDER BY departure_time
@@ -79,7 +80,7 @@ func (s *Store) SearchFlights(ctx context.Context, origin, destination string, d
 		var f Flight
 		if err := rows.Scan(
 			&f.ID, &f.Airline, &f.FlightNumber, &f.Origin, &f.Destination,
-			&f.DepartureTime, &f.ArrivalTime, &f.TotalSeats, &f.AvailableSeats, &f.PriceCents, &f.Status,
+			&f.DepartureTime, &f.ArrivalTime, &f.TotalSeats, &f.AvailableSeats, &f.PriceCents, &f.Status, &f.Version,
 		); err != nil {
 			return nil, err
 		}
@@ -92,13 +93,13 @@ func (s *Store) GetFlight(ctx context.Context, id string) (Flight, error) {
 	var f Flight
 	row := s.pool.QueryRow(ctx, `
 		SELECT id, airline, flight_number, origin, destination, departure_time, arrival_time,
-		       total_seats, available_seats, price_cents, status
+		       total_seats, available_seats, price_cents, status, version
 		FROM flights
 		WHERE id=$1
 	`, id)
 	if err := row.Scan(
 		&f.ID, &f.Airline, &f.FlightNumber, &f.Origin, &f.Destination,
-		&f.DepartureTime, &f.ArrivalTime, &f.TotalSeats, &f.AvailableSeats, &f.PriceCents, &f.Status,
+		&f.DepartureTime, &f.ArrivalTime, &f.TotalSeats, &f.AvailableSeats, &f.PriceCents, &f.Status, &f.Version,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Flight{}, ErrNotFound
@@ -146,7 +147,8 @@ func (s *Store) ReserveSeats(ctx context.Context, flightID, bookingID string, se
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE flights
-		SET available_seats = available_seats - $1
+		SET available_seats = available_seats - $1,
+		    version = version + 1
 		WHERE id=$2
 	`, seatCount, flightID); err != nil {
 		return Reservation{}, err
@@ -197,7 +199,8 @@ func (s *Store) ReleaseReservation(ctx context.Context, bookingID string) (Reser
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE flights
-		SET available_seats = available_seats + $1
+		SET available_seats = available_seats + $1,
+		    version = version + 1
 		WHERE id=$2
 	`, r.SeatCount, r.FlightID); err != nil {
 		return Reservation{}, err
