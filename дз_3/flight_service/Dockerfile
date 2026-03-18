@@ -7,9 +7,11 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 
 WORKDIR /app
+COPY go.mod go.sum ./
+RUN for i in 1 2 3 4 5; do go mod download && exit 0; sleep $((i * 2)); done; exit 1
+
 COPY . .
 
-RUN go mod download
 RUN sh ./scripts/gen_proto.sh
 RUN CGO_ENABLED=0 go build -o /bin/flight ./flight_service/cmd/flight
 

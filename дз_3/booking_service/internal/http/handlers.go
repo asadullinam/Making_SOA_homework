@@ -98,6 +98,10 @@ func (h *Handler) SearchFlights(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetFlight(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidUUID(id) {
+		writeError(w, http.StatusBadRequest, "id должен быть UUID")
+		return
+	}
 	resp, err := h.flight.GetFlight(r.Context(), &flightv1.GetFlightRequest{FlightId: id})
 	if err != nil {
 		writeGrpcError(w, err)
@@ -115,6 +119,10 @@ func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.UserID == "" || req.FlightID == "" || req.PassengerName == "" || req.PassengerEmail == "" || req.SeatCount <= 0 {
 		writeError(w, http.StatusBadRequest, "неверные поля")
+		return
+	}
+	if !isValidUUID(req.FlightID) {
+		writeError(w, http.StatusBadRequest, "flight_id должен быть UUID")
 		return
 	}
 
@@ -161,6 +169,10 @@ func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidUUID(id) {
+		writeError(w, http.StatusBadRequest, "id должен быть UUID")
+		return
+	}
 	booking, err := h.store.GetBooking(r.Context(), id)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -175,6 +187,10 @@ func (h *Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isValidUUID(id) {
+		writeError(w, http.StatusBadRequest, "id должен быть UUID")
+		return
+	}
 	booking, err := h.store.GetBooking(r.Context(), id)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -285,4 +301,9 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
+}
+
+func isValidUUID(v string) bool {
+	_, err := uuid.Parse(v)
+	return err == nil
 }

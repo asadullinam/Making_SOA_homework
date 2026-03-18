@@ -8,6 +8,7 @@ import (
 
 	"github.com/aydar/soa-dz3/flight_service/internal/cache"
 	"github.com/aydar/soa-dz3/flight_service/internal/store"
+	"github.com/google/uuid"
 	flightv1 "github.com/aydar/soa-dz3/flight_service/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -74,6 +75,9 @@ func (s *Server) GetFlight(ctx context.Context, req *flightv1.GetFlightRequest) 
 	if req.GetFlightId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "flight_id обязателен")
 	}
+	if _, err := uuid.Parse(req.GetFlightId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "flight_id должен быть UUID")
+	}
 
 	var cached flightv1.Flight
 	if s.cache != nil {
@@ -104,6 +108,12 @@ func (s *Server) GetFlight(ctx context.Context, req *flightv1.GetFlightRequest) 
 func (s *Server) ReserveSeats(ctx context.Context, req *flightv1.ReserveSeatsRequest) (*flightv1.ReserveSeatsResponse, error) {
 	if req.GetFlightId() == "" || req.GetBookingId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "flight_id и booking_id обязательны")
+	}
+	if _, err := uuid.Parse(req.GetFlightId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "flight_id должен быть UUID")
+	}
+	if _, err := uuid.Parse(req.GetBookingId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "booking_id должен быть UUID")
 	}
 	if req.GetSeatCount() <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "seat_count должен быть > 0")
@@ -138,6 +148,9 @@ func (s *Server) ReserveSeats(ctx context.Context, req *flightv1.ReserveSeatsReq
 func (s *Server) ReleaseReservation(ctx context.Context, req *flightv1.ReleaseReservationRequest) (*flightv1.ReleaseReservationResponse, error) {
 	if req.GetBookingId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "booking_id обязателен")
+	}
+	if _, err := uuid.Parse(req.GetBookingId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "booking_id должен быть UUID")
 	}
 
 	res, err := s.store.ReleaseReservation(ctx, req.GetBookingId())

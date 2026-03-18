@@ -103,9 +103,9 @@ services:
   swagger_ui:
     image: swaggerapi/swagger-ui:latest
     environment:
-      SWAGGER_JSON: /openapi/flight_service.yaml
+      SWAGGER_JSON: /openapi/booking_service.yaml
     volumes:
-      - ./flight_service/resources/openapi/flight_service.yaml:/openapi/flight_service.yaml:ro
+      - ./booking_service/resources/openapi/booking_service.yaml:/openapi/booking_service.yaml:ro
     depends_on:
       booking_service:
         condition: service_started
