@@ -1,0 +1,11 @@
+groups:
+  - name: warehouse-consumer
+    rules:
+      - alert: ConsumerLagTooHigh
+        expr: max(consumer_lag) > 5
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: Warehouse consumer lag is above threshold
+          description: Consumer lag has been greater than 5 for at least 30 seconds.
