@@ -1,0 +1,273 @@
+services:
+  kafka-1:
+    image: confluentinc/cp-kafka:7.7.1
+    hostname: kafka-1
+    container_name: dz6-kafka-1
+    environment:
+      CLUSTER_ID: MjRFMEE0MzY3ODkwQkNERQ
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "19092:9092"
+
+  kafka-2:
+    image: confluentinc/cp-kafka:7.7.1
+    hostname: kafka-2
+    container_name: dz6-kafka-2
+    environment:
+      CLUSTER_ID: MjRFMEE0MzY3ODkwQkNERQ
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "29092:9092"
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.7.1
+    hostname: schema-registry
+    container_name: dz6-schema-registry
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-1:9092,PLAINTEXT://kafka-2:9092
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8081:8081"
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: dz6-kafka-init
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    volumes:
+      - ./infra/kafka/init-topics-and-schema.sh:/scripts/init-topics-and-schema.sh:ro
+      - ./schemas:/schemas:ro
+    entrypoint: ["/bin/bash", "/scripts/init-topics-and-schema.sh"]
+    restart: "no"
+
+  cassandra-1:
+    image: cassandra:5.0
+    container_name: dz6-cassandra-1
+    hostname: cassandra-1
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1,cassandra-2,cassandra-3
+      CASSANDRA_NUM_TOKENS: 16
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+    ports:
+      - "9042:9042"
+
+  cassandra-2:
+    image: cassandra:5.0
+    container_name: dz6-cassandra-2
+    hostname: cassandra-2
+    depends_on:
+      cassandra-1:
+        condition: service_started
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1,cassandra-2,cassandra-3
+      CASSANDRA_NUM_TOKENS: 16
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 50s
+    ports:
+      - "9142:9042"
+
+  cassandra-3:
+    image: cassandra:5.0
+    container_name: dz6-cassandra-3
+    hostname: cassandra-3
+    depends_on:
+      cassandra-1:
+        condition: service_started
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1,cassandra-2,cassandra-3
+      CASSANDRA_NUM_TOKENS: 16
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    ports:
+      - "9242:9042"
+
+  cassandra-init:
+    build:
+      context: ./consumer-service
+    container_name: dz6-cassandra-init
+    depends_on:
+      cassandra-1:
+        condition: service_healthy
+      cassandra-2:
+        condition: service_healthy
+      cassandra-3:
+        condition: service_healthy
+    environment:
+      CASSANDRA_CONTACT_POINTS: cassandra-1,cassandra-2,cassandra-3
+      CASSANDRA_PORT: 9042
+      CASSANDRA_KEYSPACE: warehouse
+    command: ["python", "-m", "app.schema_init"]
+    restart: "no"
+
+  wms-service:
+    build:
+      context: ./wms-service
+    container_name: dz6-wms-service
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      schema-registry:
+        condition: service_healthy
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092,kafka-2:9092
+      KAFKA_TOPIC: warehouse-events
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KAFKA_ACKS: all
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()\" >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8000:8000"
+
+  consumer-service:
+    build:
+      context: ./consumer-service
+    container_name: dz6-consumer-service
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      cassandra-init:
+        condition: service_completed_successfully
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8001
+      KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092,kafka-2:9092
+      KAFKA_TOPIC: warehouse-events
+      KAFKA_DLQ_TOPIC: warehouse-events-dlq
+      KAFKA_CONSUMER_GROUP: warehouse-state-consumer
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CASSANDRA_CONTACT_POINTS: cassandra-1,cassandra-2,cassandra-3
+      CASSANDRA_PORT: 9042
+      CASSANDRA_KEYSPACE: warehouse
+      CASSANDRA_READ_CONSISTENCY: QUORUM
+      CASSANDRA_WRITE_CONSISTENCY: QUORUM
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=5).read()\" >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8001:8001"
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    container_name: dz6-prometheus
+    depends_on:
+      consumer-service:
+        condition: service_healthy
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: dz6-grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    ports:
+      - "3000:3000"
