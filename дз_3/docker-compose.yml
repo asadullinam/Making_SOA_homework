@@ -1,0 +1,113 @@
+services:
+  flight_db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: flight_db
+      POSTGRES_USER: flight_user
+      POSTGRES_PASSWORD: flight_pass
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flight_user -d flight_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  booking_db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_pass
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis_master:
+    image: bitnami/redis:latest
+    environment:
+      REDIS_REPLICATION_MODE: master
+      ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "6379:6379"
+
+  redis_replica:
+    image: bitnami/redis:latest
+    environment:
+      REDIS_REPLICATION_MODE: replica
+      REDIS_MASTER_HOST: redis_master
+      REDIS_MASTER_PORT_NUMBER: 6379
+      ALLOW_EMPTY_PASSWORD: "yes"
+    depends_on:
+      - redis_master
+
+  redis_sentinel:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      REDIS_MASTER_HOST: redis_master
+      REDIS_MASTER_PORT_NUMBER: 6379
+      REDIS_MASTER_SET: mymaster
+      ALLOW_EMPTY_PASSWORD: "yes"
+    depends_on:
+      - redis_master
+    ports:
+      - "26379:26379"
+
+  flight_service:
+    build:
+      context: .
+      dockerfile: ./flight_service/Dockerfile
+    environment:
+      DB_URL: postgres://flight_user:flight_pass@flight_db:5432/flight_db?sslmode=disable
+      GRPC_ADDR: :50051
+      MIGRATIONS_PATH: file:///app/flight_service/migrations
+      GRPC_API_KEY: dev-key
+      REDIS_MODE: sentinel
+      REDIS_SENTINELS: redis_sentinel:26379
+      REDIS_MASTER_NAME: mymaster
+      CACHE_TTL_SECONDS: "600"
+    depends_on:
+      flight_db:
+        condition: service_healthy
+      redis_sentinel:
+        condition: service_started
+    restart: on-failure
+    ports:
+      - "50051:50051"
+
+  booking_service:
+    build:
+      context: .
+      dockerfile: ./booking_service/Dockerfile
+    environment:
+      DB_URL: postgres://booking_user:booking_pass@booking_db:5432/booking_db?sslmode=disable
+      HTTP_ADDR: :8080
+      FLIGHT_GRPC_ADDR: flight_service:50051
+      MIGRATIONS_PATH: file:///app/booking_service/migrations
+      FLIGHT_API_KEY: dev-key
+      CB_FAILURE_THRESHOLD: "5"
+      CB_OPEN_SECONDS: "20"
+    depends_on:
+      booking_db:
+        condition: service_healthy
+      flight_service:
+        condition: service_started
+    restart: on-failure
+    ports:
+      - "8080:8080"
+
+  swagger_ui:
+    image: swaggerapi/swagger-ui:latest
+    environment:
+      SWAGGER_JSON: /openapi/booking_service.yaml
+    volumes:
+      - ./booking_service/resources/openapi/booking_service.yaml:/openapi/booking_service.yaml:ro
+    depends_on:
+      booking_service:
+        condition: service_started
+    ports:
+      - "8081:8080"
