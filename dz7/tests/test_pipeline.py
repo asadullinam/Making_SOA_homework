@@ -1,0 +1,1 @@
+from test_integration import test_event_flows_from_producer_to_clickhouse
