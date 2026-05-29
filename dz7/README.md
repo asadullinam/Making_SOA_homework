@@ -168,7 +168,7 @@ kafka_consumergroup_lag_sum{consumergroup="clickhouse-movie-events"}
 - SLO: `< 100`
 - Порог отказа: `> 1000`
 
-Первые два SLI используются в CI через `tests/validate_metrics.py`.
+Все три SLI используются в CI через `tests/validate_metrics.py`.
 
 ## Alert rules
 
@@ -179,6 +179,7 @@ kafka_consumergroup_lag_sum{consumergroup="clickhouse-movie-events"}
 - `ServiceDown`
 - `HighErrorRate`
 - `HighLatencyP95`
+- `ConsumerLagHigh`
 
 ### Как показать firing на защите
 

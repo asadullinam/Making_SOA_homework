@@ -9,6 +9,7 @@ from helpers import PROMETHEUS_URL, wait_for_prometheus_query, write_json_artifa
 RESULTS_FILE = os.getenv("RESULTS_FILE", "/tests/artifacts/metrics-validation.json")
 P95_THRESHOLD_SECONDS = float(os.getenv("P95_THRESHOLD_SECONDS", "0.5"))
 ERROR_RATE_THRESHOLD = float(os.getenv("ERROR_RATE_THRESHOLD", "0.01"))
+CONSUMER_LAG_THRESHOLD = float(os.getenv("CONSUMER_LAG_THRESHOLD", "1000"))
 
 
 def read_scalar(query: str) -> float:
@@ -40,6 +41,9 @@ def main() -> None:
     p95_latency = read_scalar(
         'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service="producer-service",endpoint!="/metrics"}[5m])))'
     )
+    consumer_lag = read_scalar_allow_empty(
+        'kafka_consumergroup_lag_sum{consumergroup="clickhouse-movie-events"}'
+    )
 
     payload = {
         "prometheus_url": PROMETHEUS_URL,
@@ -48,10 +52,12 @@ def main() -> None:
             "aggregation_up": aggregation_up,
             "producer_error_rate": error_rate,
             "producer_p95_latency_seconds": p95_latency,
+            "clickhouse_movie_events_consumer_lag": consumer_lag,
         },
         "thresholds": {
             "producer_error_rate_lt": ERROR_RATE_THRESHOLD,
             "producer_p95_latency_seconds_lt": P95_THRESHOLD_SECONDS,
+            "clickhouse_movie_events_consumer_lag_lt": CONSUMER_LAG_THRESHOLD,
         },
     }
     write_json_artifact(RESULTS_FILE, payload)
@@ -60,6 +66,7 @@ def main() -> None:
     assert aggregation_up == 1.0
     assert error_rate < ERROR_RATE_THRESHOLD, payload
     assert p95_latency < P95_THRESHOLD_SECONDS, payload
+    assert consumer_lag < CONSUMER_LAG_THRESHOLD, payload
 
 
 if __name__ == "__main__":

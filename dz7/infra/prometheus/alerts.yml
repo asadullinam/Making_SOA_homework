@@ -36,3 +36,12 @@ groups:
         annotations:
           summary: "High p95 latency on {{ $labels.service }}"
           description: "p95 latency is above 1 second for 5 minutes."
+
+      - alert: ConsumerLagHigh
+        expr: kafka_consumergroup_lag_sum{consumergroup="clickhouse-movie-events"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High consumer lag for clickhouse-movie-events"
+          description: "Kafka consumer lag is above 1000 messages for 5 minutes."
