@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: Movie Analytics
+    folder: Movie Analytics
+    type: file
+    updateIntervalSeconds: 15
+    options:
+      path: /var/lib/grafana/dashboards

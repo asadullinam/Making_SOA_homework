@@ -1,0 +1,4 @@
+clickhouse-connect==0.8.13
+psycopg[binary]==3.2.6
+pytest==8.3.5
+requests==2.32.3

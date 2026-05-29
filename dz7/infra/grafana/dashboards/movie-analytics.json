@@ -1,0 +1,270 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.15.0",
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(metric_date) AS time, toFloat64(dau) AS value FROM movie_analytics.daily_dau FINAL ORDER BY metric_date",
+          "refId": "A"
+        }
+      ],
+      "title": "DAU",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.15.0",
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(metric_date) AS time, toFloat64(conversion_rate) AS value FROM movie_analytics.daily_conversion FINAL ORDER BY metric_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Conversion Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.15.0",
+          "queryType": "timeseries",
+          "rawSql": "SELECT toDateTime(metric_date) AS time, toFloat64(avg_watch_seconds) AS value FROM movie_analytics.daily_avg_watch_time FINAL ORDER BY metric_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Average Watch Seconds",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.15.0",
+          "queryType": "table",
+          "rawSql": "SELECT\n  cohort_date,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 0), 0), 2) AS day_0,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 1), 0), 2) AS day_1,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 2), 0), 2) AS day_2,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 3), 0), 2) AS day_3,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 4), 0), 2) AS day_4,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 5), 0), 2) AS day_5,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 6), 0), 2) AS day_6,\n  round(100 * ifNull(maxIf(retention_rate, lifecycle_day = 7), 0), 2) AS day_7\nFROM movie_analytics.retention_cohorts FINAL\nGROUP BY cohort_date\nORDER BY cohort_date",
+          "refId": "A"
+        }
+      ],
+      "title": "Retention Cohort Heatmap",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "clickhouse",
+    "kafka",
+    "movie-analytics"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Movie Analytics",
+  "uid": "movie-analytics",
+  "version": 1
+}

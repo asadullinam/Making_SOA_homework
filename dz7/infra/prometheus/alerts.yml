@@ -1,0 +1,47 @@
+groups:
+  - name: movie-analytics-alerts
+    rules:
+      - alert: ServiceDown
+        expr: up{job=~"producer-service|aggregation-service|postgres-exporter|kafka-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum by (service) (rate(http_request_errors_total{service=~"producer-service|aggregation-service"}[5m]))
+            /
+            clamp_min(sum by (service) (rate(http_requests_total{service=~"producer-service|aggregation-service"}[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "HTTP error rate is above 5% for 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, service) (rate(http_request_duration_seconds_bucket{service=~"producer-service|aggregation-service"}[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.service }}"
+          description: "p95 latency is above 1 second for 5 minutes."
+
+      - alert: ConsumerLagHigh
+        expr: kafka_consumergroup_lag_sum{consumergroup="clickhouse-movie-events"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High consumer lag for clickhouse-movie-events"
+          description: "Kafka consumer lag is above 1000 messages for 5 minutes."
